@@ -1,668 +1,328 @@
 <!doctype html>
 <html lang="ko">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>시계 공부</title>
-    <style>
-      :root {
-        --bg: #0b0c10;
-        --card: #101218;
-        --ink: #e9ecff;
-        --muted: #a7adcf;
-        --line: #24283a;
-        --brand: #7c4dff;
-        --ok: #27ae60;
-        --bad: #ff5a5a;
-      }
-      * { box-sizing: border-box }
-      body {
-        margin: 0;
-        background: var(--bg);
-        color: var(--ink);
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", sans-serif;
-      }
-      .container { max-width: 980px; margin: 0 auto; padding: 18px 14px }
-      header {
-        position: sticky; top: 0;
-        background: rgba(11,12,16,.7);
-        backdrop-filter: blur(8px);
-        border-bottom: 1px solid var(--line);
-        z-index: 10;
-      }
-      .bar { max-width: 980px; margin: 0 auto; display: flex; align-items: center; gap: 10px; padding: 12px 14px }
-      .title { font-weight: 700 }
-      .pill { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 8px 12px }
-      .row { display: flex; gap: 14px; flex-wrap: wrap }
-      .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px }
-      .grow { flex: 1 1 320px }
-      .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 6px 0 10px }
-      select, button, input {
-        background: #0f0f14; border: 1px solid var(--line); color: var(--ink); padding: 10px 12px; border-radius: 10px
-      }
-      button { cursor: pointer }
-      button.primary { border-color: var(--brand) }
-      button.ok { background: var(--ok); border-color: var(--ok); color: #fff }
-      button.bad { background: var(--bad); border-color: var(--bad); color: #fff }
-      .hint { color: var(--muted); font-size: .95rem }
-      .big { font-size: 1.3rem }
-      .score { display: flex; gap: 10px; align-items: center }
-      .score .badge { border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px }
-      .result { margin-top: 8px; font-weight: 700 }
-      .result.ok { color: var(--ok) }
-      .result.bad { color: var(--bad) }
-      .clock-wrap { display: flex; justify-content: center; align-items: center; padding: 10px }
-      svg { max-width: 420px; width: 100%; height: auto }
-      .legend { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: center; margin-top: 8px }
-      .dot { width: 10px; height: 10px; border-radius: 50% }
-      .dot.min { background: #9ad0ff }
-      .dot.hour { background: #ffd480 }
-      .sr-only { position: absolute; left: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden }
-      .footer { color: var(--muted); font-size: .9rem; margin-top: 14px }
-    /* 모바일 드래그 안정화 */
-html, body { overscroll-behavior: none; }
-.clock-wrap, svg { -webkit-user-select: none; user-select: none; }
-#clock, #minuteHand, #hourHand { touch-action: none; } /* 터치 제스처(스크롤/줌) 차단 */
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>시계 공부 – 초1 놀이앱 (모바일 고정)</title>
+<style>
+  :root{
+    --bg:#0b0c10; --card:#101218; --ink:#e9ecff; --muted:#a7adcf;
+    --line:#24283a; --brand:#7c4dff; --ok:#27ae60; --bad:#ff5a5a;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans KR",sans-serif;
+    overscroll-behavior:none;}
+  .container{max-width:980px;margin:0 auto;padding:18px 14px}
+  header{position:sticky;top:0;background:rgba(11,12,16,.7);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);z-index:10}
+  .bar{max-width:980px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:12px 14px}
+  .title{font-weight:700}
+  .pill{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 12px}
+  .row{display:flex;gap:14px;flex-wrap:wrap}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+  .grow{flex:1 1 320px}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:6px 0 10px}
+  select,button,input{background:#0f0f14;border:1px solid var(--line);color:var(--ink);padding:10px 12px;border-radius:10px}
+  button{cursor:pointer}
+  button.primary{border-color:var(--brand)}
+  .hint{color:var(--muted);font-size:.95rem}
+  .big{font-size:1.25rem}
+  .result{margin-top:8px;font-weight:700}
+  .result.ok{color:var(--ok)} .result.bad{color:var(--bad)}
+  .clock-wrap{display:flex;justify-content:center;align-items:center;padding:10px; -webkit-user-select:none; user-select:none; touch-action:none;}
+  svg{max-width:420px;width:100%;height:auto; touch-action:none;}
+  #clock, #minuteHand, #hourHand { touch-action:none; }
+  /* 보이지 않는 히트영역(터치 집기 쉬움) */
+  #minuteHand .hit, #hourHand .hit { fill: transparent; pointer-events: all; }
 
-/* 손잡이(히트영역) 살짝 확대 – 보이지 않음 */
-#minuteHand, #hourHand { pointer-events: all; }
-#minuteHand .hit, #hourHand .hit { fill: transparent; pointer-events: all; }
+  /* 읽기 버튼 + 타이핑 */
+  #btnReadTime{transition:transform .15s ease, box-shadow .15s ease}
+  #btnReadTime:hover{transform:translateY(-1px); box-shadow:0 6px 18px rgba(124,77,255,.25)}
+  #readText{margin-top:10px;text-align:center;font-size:1.05rem;min-height:1.6em}
+  .typing::after{content:'▌';margin-left:2px;animation:caret 1s step-start infinite;opacity:.8}
+  .typing.done::after{content:'';animation:none}
+  @keyframes caret{50%{opacity:0}}
 
-    </style>
-  </head>
-  <body>
-    <header>
-      <div class="bar">
-        <div class="title">🕒 시계 공부 – 초1 놀이앱</div>
-        <div class="pill score" style="margin-left:auto">
-          <span class="badge">정답: <strong id="correctCount">0</strong></span>
-          <span class="badge">연속: <strong id="streak">0</strong></span>
-          <span class="badge">최고기록: <strong id="best">0</strong></span>
-        </div>
+  /* 축하 토스트 */
+  .toast{position:fixed;left:50%;top:18%;transform:translate(-50%,-20%) scale(.92);
+    background:rgba(16,18,24,.85);border:1px solid var(--line);backdrop-filter:blur(8px);
+    color:var(--ink);padding:14px 18px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.35);
+    font-weight:800;letter-spacing:.3px;z-index:10000;opacity:0}
+  .toast.show{animation:pop .9s cubic-bezier(.2,.8,.2,1) forwards}
+  @keyframes pop{0%{opacity:0;transform:translate(-50%,-10%) scale(.92)}45%{opacity:1;transform:translate(-50%,0) scale(1.02)}100%{opacity:1;transform:translate(-50%,0) scale(1)}}
+  .celebrate{position:fixed;inset:0;pointer-events:none;z-index:9999}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="title">🕒 시계 공부 – 초1 놀이앱</div>
+    <div class="pill" style="margin-left:auto">🎯 목표: <strong id="targetLabel">—</strong></div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="row">
+    <section class="card grow">
+      <h2 style="margin:6px 0 8px">아날로그 시계</h2>
+      <div class="clock-wrap">
+        <!-- 학습용 시계 -->
+        <svg id="clock" viewBox="0 0 200 200" role="img" aria-label="학습용 시계">
+          <circle cx="100" cy="100" r="94" fill="#0a0b10" stroke="#2c3150" stroke-width="2"/>
+          <circle cx="100" cy="100" r="92" fill="#0f1119" stroke="#3a406b" stroke-width="1"/>
+          <g id="ticks"></g>
+          <!-- 분침 -->
+          <g id="minuteHand" transform="rotate(0 100 100)" style="cursor:grab">
+            <rect x="99" y="24" width="2" height="76" rx="2" ry="2" fill="#9ad0ff"/>
+            <circle cx="100" cy="36" r="18" class="hit"></circle><!-- 히트영역 -->
+            <circle cx="100" cy="100" r="6" fill="#9ad0ff"/>
+          </g>
+          <!-- 시침 -->
+          <g id="hourHand" transform="rotate(0 100 100)" style="cursor:grab">
+            <rect x="98" y="48" width="4" height="52" rx="2" ry="2" fill="#ffd480"/>
+            <circle cx="100" cy="56" r="18" class="hit"></circle><!-- 히트영역 -->
+            <circle cx="100" cy="100" r="6" fill="#ffd480"/>
+          </g>
+          <circle cx="100" cy="100" r="3" fill="#fff"/>
+        </svg>
       </div>
-    </header>
+      <div class="controls" style="justify-content:center; margin-top:10px">
+        <button id="btnReadTime" class="primary">🗣️ 지금 시각 읽기</button>
+      </div>
+      <div id="readText" class="typing" aria-live="polite" aria-atomic="true"></div>
+      <p class="hint" style="text-align:center">모바일에선 한 손가락으로 바늘을 끌어보세요.</p>
+    </section>
 
-    <div class="container">
-      <div class="row">
-        <section class="card grow" aria-labelledby="learn-clock">
-          <h2 id="learn-clock" style="margin:6px 0 8px">아날로그 시계</h2>
-          <div class="clock-wrap">
-            <!-- SVG 시계 -->
-            <svg id="clock" viewBox="0 0 200 200" role="img" aria-label="학습용 시계">
-              <!-- 외곽 원 -->
-              <circle cx="100" cy="100" r="94" fill="#0a0b10" stroke="#2c3150" stroke-width="2"></circle>
-              <circle cx="100" cy="100" r="92" fill="#0f1119" stroke="#3a406b" stroke-width="1"></circle>
-
-              <!-- 분침 g 내부 끝쪽에 -->
-<circle class="hit" cx="100" cy="36" r="18"></circle>
-<!-- 시침 g 내부 끝쪽에 -->
-<circle class="hit" cx="100" cy="56" r="18"></circle>
-
-              <!-- 눈금 -->
-              <g id="ticks"></g>
-
-              <!-- 분침 -->
-              <g id="minuteHand" transform="rotate(0 100 100)" style="cursor:grab">
-                <rect x="99" y="24" width="2" height="76" rx="2" ry="2" fill="#9ad0ff"></rect>
-                <circle cx="100" cy="100" r="6" fill="#9ad0ff"></circle>
-              </g>
-
-              <!-- 시침 -->
-              <g id="hourHand" transform="rotate(0 100 100)" style="cursor:grab">
-                <rect x="98" y="48" width="4" height="52" rx="2" ry="2" fill="#ffd480"></rect>
-                <circle cx="100" cy="100" r="6" fill="#ffd480"></circle>
-              </g>
-
-              <!-- 중심 -->
-              <circle cx="100" cy="100" r="3" fill="#fff"></circle>
-            </svg>
-          </div>
-          <div class="legend">
-            <span class="dot min"></span><span class="hint">분침 드래그</span>
-            <span class="dot hour"></span><span class="hint">시침 드래그</span>
-          </div>
-          <p class="hint" style="text-align:center">
-            손가락(모바일)이나 마우스로 바늘을 드래그해서 움직여 보세요.
-          </p>
-        </section>
-
-        <section class="card grow" aria-labelledby="game-panel">
-          <h2 id="game-panel" style="margin:6px 0 8px">게임 패널</h2>
-
-          <div class="controls">
-            <label>모드
-              <select id="mode">
-                <option value="set">맞추기(손으로 맞추기)</option>
-                <option value="read">읽기(시간 적기)</option>
-              </select>
-            </label>
-            <label>난이도
-              <select id="difficulty">
-                <option value="hour">정시(00분)</option>
-                <option value="half">30분</option>
-                <option value="ten">10분 단위</option>
-                <option value="five" selected>5분 단위</option>
-                <option value="one">1분 단위</option>
-              </select>
-            </label>
-            <button id="newQ" class="primary">새 문제</button>
-          </div>
-
-          <div id="panelSet" class="card" style="background:#0d0f16">
-            <div class="big">🎯 목표 시간: <strong id="targetLabel">—</strong></div>
-            <p class="hint">
-              아날로그 시계를 드래그해 목표 시간과 똑같이 맞춘 뒤 <em>정답 확인</em>을 누르세요.
-            </p>
-            <div class="controls">
-              <button id="checkSet" class="">정답 확인</button>
-              <button id="showAnswerSet">정답 보기</button>
-              <span id="resultSet" class="result"></span>
-            </div>
-          </div>
-
-          <div id="panelRead" class="card" style="background:#0d0f16; display:none">
-            <div class="big">🔎 이 시계는 몇 시 몇 분?</div>
-            <div class="controls">
-              <label>시
-                <input id="ansHour" type="number" min="1" max="12" inputmode="numeric" style="width:90px" />
-              </label>
-              <label>분
-                <input id="ansMin" type="number" min="0" max="59" inputmode="numeric" style="width:110px" />
-              </label>
-              <button id="checkRead">정답 확인</button>
-              <button id="showAnswerRead">정답 보기</button>
-
-
-              <span id="resultRead" class="result"></span>
-            </div>
-          </div>
-
-         <div class="controls" style="justify-content:center; margin-top:10px">
-  <button id="btnReadTime" class="primary">🗣️ 지금 시각 읽기</button>
+    <section class="card grow">
+      <h2 style="margin:6px 0 8px">게임 패널</h2>
+      <div class="controls">
+        <label>난이도
+          <select id="difficulty">
+            <option value="hour">정시(00분)</option>
+            <option value="half">30분</option>
+            <option value="ten">10분 단위</option>
+            <option value="five" selected>5분 단위</option>
+            <option value="one">1분 단위</option>
+          </select>
+        </label>
+        <button id="newQ" class="primary">새 문제</button>
+      </div>
+      <div class="controls">
+        <button id="checkSet">정답 확인</button>
+        <button id="showAnswerSet">정답 보기</button>
+        <span id="resultSet" class="result"></span>
+      </div>
+    </section>
+  </div>
 </div>
 
-          <div class="footer">
-            팁: 난이도를 올리면(5분 → 1분) <strong>분침 정밀도</strong>가 높아져요.
-            생활 연결 질문 예) “버스 도착 10분 전이면 분침이 어디 있을까?”
-          </div>
-        </section>
-      </div>
-    </div>
+<canvas id="celebrateCanvas" class="celebrate"></canvas>
+<div id="toast" class="toast">정답! 잘했어요 🎉</div>
 
-    <script>
-      /* ========= 유틸 ========= */
-      const el = (sel) => document.querySelector(sel);
-      const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+<script>
+/* ===== 공통 유틸 ===== */
+const $ = s => document.querySelector(s);
+const svg = $('#clock'), ticks = $('#ticks'), minHand = $('#minuteHand'), hourHand = $('#hourHand');
+const state = { now:{h:3,m:0}, target:{h:3,m:0}, difficulty:'five' };
+const pad2 = n => String(n).padStart(2,'0');
+const label = (h,m)=>`${((h%12)+12)%12||12}시 ${pad2(m)}분`;
 
-
-
-
-
-      function pad2(n) { return String(n).padStart(2, '0'); }
-      function labelTime(h, m) {
-        const hh = ((h % 12) + 12) % 12 || 12;
-        return `${hh}시 ${pad2(m)}분`; // ← 템플릿 리터럴 수정
-      }
-      function snapByDifficulty(min, diff) {
-        switch (diff) {
-          case 'hour': return 0;
-          case 'half': return (Math.round(30 / 30) * 30) % 60; // 30 고정
-          case 'ten':  return Math.round(min / 10) * 10;
-          case 'five': return Math.round(min / 5) * 5;
-          case 'one':  return Math.round(min);
-          default:     return Math.round(min / 5) * 5;
-        }
-      }
-      function randomTime(diff) {
-        let h = Math.floor(Math.random() * 12); // 0~11
-        let m = 0;
-        if (diff === 'hour') m = 0;
-        else if (diff === 'half') m = 30;
-        else if (diff === 'ten') m = (Math.floor(Math.random() * 6)) * 10;
-        else if (diff === 'five') m = (Math.floor(Math.random() * 12)) * 5;
-        else m = Math.floor(Math.random() * 60);
-        return { h, m };
-      }
-      function minuteTolerance(diff) {
-        switch (diff) {
-          case 'hour': return 1; // 거의 정시
-          case 'half': return 1;
-          case 'ten':  return 1;
-          case 'five': return 0; // 5분 단위는 정확히
-          case 'one':  return 0; // 1분 단위는 정확히
-          default:     return 0;
-        }
-      }
-
-      /* ========= 시계 렌더 ========= */
-      const svg = el('#clock');
-      const ticksGroup = el('#ticks');
-      const minHand = el('#minuteHand');
-      const hourHand = el('#hourHand');
-
-      let state = {
-        mode: 'set', // set | read
-        difficulty: 'five',
-        target: { h: 3, m: 0 },
-        now:    { h: 3, m: 0 }, // 사용자가 맞추는 현재 아날로그
-        dragging: null,         // 'minute' | 'hour' | null
-        stats: { correct: 0, streak: 0, best: 0 }
-      };
-
-      /* ========= 눈금 생성 (IIFE) ========= */
-      (function buildTicks(){
-        const cx = 100, cy = 100, rOuter = 86, rInner = 80, rHourInner = 76;
-        for (let i = 0; i < 60; i++) {
-          const angle = (i / 60) * 2 * Math.PI;
-          const isHour = i % 5 === 0;
-          const r1 = isHour ? rHourInner : rInner;
-          const x1 = cx + r1 * Math.sin(angle);
-          const y1 = cy - r1 * Math.cos(angle);
-          const x2 = cx + rOuter * Math.sin(angle);
-          const y2 = cy - rOuter * Math.cos(angle);
-
-          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-          line.setAttribute('x1', x1); line.setAttribute('y1', y1);
-          line.setAttribute('x2', x2); line.setAttribute('y2', y2);
-          line.setAttribute('stroke', isHour ? '#9aa3d4' : '#4a4f77');
-          line.setAttribute('stroke-width', isHour ? '2.2' : '1.1');
-          ticksGroup.appendChild(line);
-
-          if (isHour) {
-            const num = (i / 5) === 0 ? 12 : i / 5;
-            const rn = 66;
-            const tx = cx + rn * Math.sin(angle);
-            const ty = cy - rn * Math.cos(angle) + 4;
-
-            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            text.setAttribute('x', tx);
-            text.setAttribute('y', ty);
-            text.setAttribute('fill', '#cdd2ff');
-            text.setAttribute('font-size', '10');
-            text.setAttribute('text-anchor', 'middle');
-            text.setAttribute('font-family', 'system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR, sans-serif');
-            text.textContent = num;
-            ticksGroup.appendChild(text);
-          }
-        }
-      })();
-
-      /* ========= 렌더링 ========= */
-      function renderHands() {
-        const m = clamp(state.now.m, 0, 59);
-        const h = ((state.now.h % 12) + 12) % 12;
-        const minuteAngle = m * 6;              // 0..354
-        const hourAngle   = h * 30 + m * 0.5;   // 시침 보정
-
-        minHand.setAttribute('transform', `rotate(${minuteAngle} 100 100)`);
-        hourHand.setAttribute('transform', `rotate(${hourAngle} 100 100)`);
-      }
-
-      /* ========= 좌표→각도/시간 변환 ========= */
-      function angleFromPoint(x, y) {
-        const rect = svg.getBoundingClientRect();
-        const ptX = x - rect.left;
-        const ptY = y - rect.top;
-
-        const scaleX = 200 / rect.width;
-        const scaleY = 200 / rect.height;
-        const sx = ptX * scaleX;
-        const sy = ptY * scaleY;
-
-        const cx = 100, cy = 100;
-        let deg = Math.atan2(sx - cx, -(sy - cy)) * 180 / Math.PI;
-        if (deg < 0) deg += 360;
-        return deg; // 0..360
-      }
-
-      function minuteFromAngle(deg) {
-        let m = Math.round(deg / 6) % 60;
-        m = (m + 60) % 60;
-        const diff = state.difficulty;
-        if (diff === 'hour')      m = 0;
-        else if (diff === 'half') m = 30;
-        else if (diff === 'ten')  m = Math.round(m / 10) * 10 % 60;
-        else if (diff === 'five') m = Math.round(m / 5) * 5 % 60;
-        return m; // 'one'과 그 외는 그대로
-      }
-
-      function hourFromAngle(deg) {
-        const raw = (deg / 30) % 12;
-        const snapped = Math.round(raw) % 12; // 정수 시로 스냅
-        return snapped;
-      }
-
-      /* ========= 문제 생성/표시 ========= */
-      function updateLabels() {
-        el('#targetLabel').textContent = labelTime(state.target.h, state.target.m);
-        el('#correctCount').textContent = state.stats.correct;
-        el('#streak').textContent = state.stats.streak;
-        el('#best').textContent = state.stats.best;
-      }
-
-      function newQuestion() {
-        const diff = state.difficulty;
-        state.target = randomTime(diff);
-
-        if (state.mode === 'set') {
-          const init = randomTime(diff);
-          state.now.h = init.h;
-          state.now.m = init.m;
-        } else {
-          state.now.h = state.target.h;
-          state.now.m = state.target.m;
-          el('#ansHour').value = '';
-          el('#ansMin').value = '';
-          el('#resultRead').textContent = '';
-        }
-
-        el('#resultSet').textContent = '';
-        renderHands();
-        updateLabels();
-      }
-
-      function loadStats() {
-        try {
-          const raw = localStorage.getItem('clockStats');
-          if (raw) {
-            const s = JSON.parse(raw);
-            state.stats.correct = s.correct || 0;
-            state.stats.streak  = s.streak  || 0;
-            state.stats.best    = s.best    || 0;
-          }
-        } catch {}
-      }
-      function saveStats() {
-        try {
-          localStorage.setItem('clockStats', JSON.stringify(state.stats));
-        } catch {}
-      }
-
-      /* ========= 정답 판정 ========= */
-      function checkSetAnswer() {
-        const tol = minuteTolerance(state.difficulty);
-
-        const targetM = state.target.m;
-        const nowM = (state.difficulty === 'one' || state.difficulty === 'five' || state.difficulty === 'ten')
-          ? minuteFromAngle(state.now.m * 6)
-          : state.now.m;
-
-        const th = (state.target.h % 12 + 12) % 12;
-        const nh = (state.now.h % 12 + 12) % 12;
-
-        const minuteOK = Math.abs(nowM - targetM) <= tol;
-        const hourOK = nh === th;
-
-        const resultEl = el('#resultSet');
-        if (minuteOK && hourOK) {
-          resultEl.textContent = '정답! 잘했어요 🎉';
-          resultEl.className = 'result ok';
-          state.stats.correct += 1;
-          state.stats.streak  += 1;
-          state.stats.best = Math.max(state.stats.best, state.stats.streak);
-          saveStats();
-          updateLabels();
-        } else {
-          resultEl.textContent = `아쉬워요! 정답은 ${labelTime(state.target.h, state.target.m)} 입니다.`;
-          resultEl.className = 'result bad';
-          state.stats.streak = 0;
-          saveStats();
-          updateLabels();
-        }
-      }
-
-      function showSetAnswer() {
-        state.now.h = state.target.h;
-        state.now.m = state.target.m;
-        renderHands();
-      }
-
-      function checkReadAnswer() {
-        const h = parseInt(el('#ansHour').value, 10);
-        const m = parseInt(el('#ansMin').value, 10);
-        const resultEl = el('#resultRead');
-
-        if (Number.isNaN(h) || Number.isNaN(m)) {
-          resultEl.textContent = '숫자를 입력해요 🙂';
-          resultEl.className = 'result';
-          return;
-        }
-        const normH = ((h % 12) + 12) % 12 || 12;
-        const normT = ((state.target.h % 12) + 12) % 12 || 12;
-
-        if (normH === normT && m === state.target.m) {
-          resultEl.textContent = '정답! 👍';
-          resultEl.className = 'result ok';
-          state.stats.correct += 1;
-          state.stats.streak  += 1;
-          state.stats.best = Math.max(state.stats.best, state.stats.streak);
-          saveStats();
-          updateLabels();
-        } else {
-          resultEl.textContent = `아쉬워요! 정답은 ${labelTime(state.target.h, state.target.m)} 입니다.`;
-          resultEl.className = 'result bad';
-          state.stats.streak = 0;
-          saveStats();
-          updateLabels();
-        }
-      }
-
-      function showReadAnswer() {
-        el('#ansHour').value = ((state.target.h % 12) + 12) % 12 || 12;
-        el('#ansMin').value  = state.target.m;
-      }
-
-      /* ========= 드래그(포인터) ========= */
-      function onPointerDown(e, kind) {
-        e.preventDefault();
-        state.dragging = kind;
-        const target = (kind === 'minute') ? minHand : hourHand;
-        target.setPointerCapture?.(e.pointerId);
-      }
-      function onPointerMove(e) {
-        if (!state.dragging) return;
-        const deg = angleFromPoint(e.clientX, e.clientY);
-
-        if (state.dragging === 'minute') {
-          state.now.m = minuteFromAngle(deg);
-        } else if (state.dragging === 'hour') {
-          state.now.h = hourFromAngle(deg);
-        }
-        renderHands();
-      }
-      function onPointerUp() {
-        if (!state.dragging) return;
-        state.dragging = null;
-      }
-
-      /* ========= 이벤트 바인딩 ========= */
-      minHand.addEventListener('pointerdown', (e) => onPointerDown(e, 'minute'));
-      hourHand.addEventListener('pointerdown', (e) => onPointerDown(e, 'hour'));
-      window.addEventListener('pointermove', onPointerMove);
-      window.addEventListener('pointerup', onPointerUp);
-      window.addEventListener('pointercancel', onPointerUp);
-
-      el('#newQ').addEventListener('click', newQuestion);
-      el('#checkSet').addEventListener('click', checkSetAnswer);
-      el('#showAnswerSet').addEventListener('click', showSetAnswer);
-      el('#checkRead').addEventListener('click', checkReadAnswer);
-      el('#showAnswerRead').addEventListener('click', showReadAnswer);
-
-      el('#mode').addEventListener('change', (e) => {
-        state.mode = e.target.value;
-        el('#panelSet').style.display  = (state.mode === 'set') ? '' : 'none';
-        el('#panelRead').style.display = (state.mode === 'read') ? '' : 'none';
-        newQuestion();
-      });
-
-      el('#difficulty').addEventListener('change', (e) => {
-        state.difficulty = e.target.value;
-        newQuestion();
-      });
-
-
-/* ========= 음성 읽기(안정화) ========= */
-// 한국어 보이스를 확실히 가져오기 위한 유틸
-function loadVoicesOnce() {
-  return new Promise((resolve) => {
-    const voices = speechSynthesis.getVoices();
-    if (voices && voices.length) return resolve(voices);
-    // 일부 브라우저는 비동기로 로드됨
-    speechSynthesis.onvoiceschanged = () => resolve(speechSynthesis.getVoices());
-    // iOS 사파리 대비: resume()로 깨우기
-    try { speechSynthesis.resume(); } catch {}
-  });
-}
-
-async function pickKoreanVoice() {
-  const voices = await loadVoicesOnce();
-  // ko-KR 우선, 그 다음 'ko' 포함
-  return (
-    voices.find(v => v.lang?.toLowerCase() === 'ko-kr') ||
-    voices.find(v => v.lang?.toLowerCase().startsWith('ko')) ||
-    voices[0] // 그래도 없으면 첫 번째
-  );
-}
-
-async function speakTime() {
-  if (!('speechSynthesis' in window)) {
-    alert('이 브라우저는 음성 읽기를 지원하지 않아요 😢');
-    return;
-  }
-  // 현재 시각 문장 구성
-  const h = ((state.now.h % 12) + 12) % 12 || 12;
-  const m = state.now.m;
-  const sentence = m === 0 ? `지금은 ${h}시 정각이에요.` : `지금은 ${h}시 ${m}분이에요.`;
-
-  // 보이스 선택
-  const voice = await pickKoreanVoice();
-
-  // iOS 첫 실행 무음 이슈 완화: 기존 음성 큐 제거 + 약간의 지연
-  try { speechSynthesis.cancel(); } catch {}
-  await new Promise(r => setTimeout(r, 50));
-
-  const utter = new SpeechSynthesisUtterance(sentence);
-  utter.lang = voice?.lang || 'ko-KR';
-  utter.voice = voice || null;
-  utter.rate = 0.95;   // 약간 느리게
-  utter.pitch = 1.0;
-
-  speechSynthesis.speak(utter);
-}
-
-// 버튼 핸들러 연결(버튼이 늦게 렌더돼도 안전)
-(function wireReadButton(){
-  const btn = document.getElementById('btnReadTime');
-  if (btn) {
-    btn.addEventListener('click', speakTime, { passive: true });
-  } else {
-    // 혹시 DOM 순서로 아직 없으면 DOMContentLoaded 후 재시도
-    window.addEventListener('DOMContentLoaded', () => {
-      const b = document.getElementById('btnReadTime');
-      if (b) b.addEventListener('click', speakTime, { passive: true });
-    });
+/* 눈금 */
+(function build(){
+  const cx=100,cy=100,rO=86,rI=80,rH=76;
+  for(let i=0;i<60;i++){
+    const a=(i/60)*2*Math.PI, isH=i%5===0;
+    const r1=isH?rH:rI, x1=cx+r1*Math.sin(a), y1=cy-r1*Math.cos(a);
+    const x2=cx+rO*Math.sin(a), y2=cy-rO*Math.cos(a);
+    const ln=document.createElementNS('http://www.w3.org/2000/svg','line');
+    ln.setAttribute('x1',x1); ln.setAttribute('y1',y1);
+    ln.setAttribute('x2',x2); ln.setAttribute('y2',y2);
+    ln.setAttribute('stroke',isH?'#9aa3d4':'#4a4f77'); ln.setAttribute('stroke-width',isH?'2.2':'1.1');
+    ticks.appendChild(ln);
+    if(isH){
+      const num=(i/5)||12, rn=66, tx=cx+rn*Math.sin(a), ty=cy-rn*Math.cos(a)+4;
+      const t=document.createElementNS('http://www.w3.org/2000/svg','text');
+      t.setAttribute('x',tx); t.setAttribute('y',ty); t.setAttribute('fill','#cdd2ff');
+      t.setAttribute('font-size','10'); t.setAttribute('text-anchor','middle'); t.textContent=num;
+      ticks.appendChild(t);
+    }
   }
 })();
 
+/* 렌더 */
+function render(hh=state.now.h, mm=state.now.m){
+  const m=mm, h=((hh%12)+12)%12;
+  const ma=m*6, ha=h*30 + m*0.5;
+  minHand.setAttribute('transform',`rotate(${ma} 100 100)`);
+  hourHand.setAttribute('transform',`rotate(${ha} 100 100)`);
+}
 
-/* ===== 드래그(모바일 안정화) ===== */
-let dragKind = null;
-let activePointerId = null;
-let tempMinute = null;  // 드래그 중에는 '부드럽게' 따라가고
-let tempHour = null;    // 포인터를 떼는 순간에만 스냅
+/* 문제 */
+function randomTime(diff){
+  let h=Math.floor(Math.random()*12), m=0;
+  if(diff==='hour') m=0;
+  else if(diff==='half') m=30;
+  else if(diff==='ten') m=(Math.floor(Math.random()*6))*10;
+  else if(diff==='five') m=(Math.floor(Math.random()*12))*5;
+  else m=Math.floor(Math.random()*60);
+  return {h,m};
+}
+function newQ(){
+  state.target=randomTime(state.difficulty);
+  $('#targetLabel').textContent=label(state.target.h,state.target.m);
+  // 초기 위치는 다른 값으로
+  const init=randomTime(state.difficulty);
+  state.now={h:init.h,m:init.m};
+  render();
+}
+$('#difficulty').addEventListener('change',e=>{state.difficulty=e.target.value; newQ();});
+$('#newQ').addEventListener('click', newQ);
+newQ();
+
+/* === 좌표→각도 === */
+function angleFromPoint(clientX, clientY){
+  const rect = svg.getBoundingClientRect();
+  const sx=(clientX-rect.left)*(200/rect.width);
+  const sy=(clientY-rect.top)*(200/rect.height);
+  let deg = Math.atan2(sx-100, -(sy-100))*180/Math.PI; if(deg<0)deg+=360; return deg;
+}
+
+/* === 모바일 드래그 안정화 (Pointer 우선 + Touch/Mouse 폴백) === */
+let dragKind=null, activeId=null, tempM=null, tempH=null;
+let startX=0,startY=0;
+
+function getPoint(evt){
+  if (evt.touches && evt.touches[0]) return {x:evt.touches[0].clientX, y:evt.touches[0].clientY, id:0};
+  if (evt.changedTouches && evt.changedTouches[0]) return {x:evt.changedTouches[0].clientX, y:evt.changedTouches[0].clientY, id:0};
+  return {x:evt.clientX, y:evt.clientY, id:evt.pointerId};
+}
 
 function startDrag(e, kind){
   e.preventDefault();
-  dragKind = kind;
-  activePointerId = e.pointerId;
-  const target = (kind === 'm') ? minHand : hourHand;
-  if (target.setPointerCapture) target.setPointerCapture(activePointerId);
+  const p=getPoint(e);
+  dragKind=kind; activeId = ('pointerId' in e)? e.pointerId : 0;
+  startX=p.x; startY=p.y;
+  const target=(kind==='m')?minHand:hourHand;
+  target.setPointerCapture?.(activeId);
 }
-
 function moveDrag(e){
-  if (!dragKind || e.pointerId !== activePointerId) return;
+  if(!dragKind) return;
+  const p=getPoint(e);
+  if(('pointerId' in e) && e.pointerId!==activeId) return;
   e.preventDefault();
-  const deg = angleFromPoint(e.clientX, e.clientY);
-
-  if (dragKind === 'm'){
-    // 이동 중엔 '부드럽게' 각도로부터 분을 실수형으로 계산해서 표시만 부드럽게
-    const raw = deg / 6;             // 0..60 float
-    tempMinute = ((raw % 60) + 60) % 60;
-  } else {
-    const raw = deg / 30;            // 0..12 float
-    tempHour = ((raw % 12) + 12) % 12;
-  }
-  renderHandsSmooth();
+  // 5px 데드존
+  const dx=p.x-startX, dy=p.y-startY; if((dx*dx+dy*dy)<25) return;
+  const deg=angleFromPoint(p.x,p.y);
+  if(dragKind==='m'){ tempM = ((deg/6)%60+60)%60; }
+  else{ tempH = ((deg/30)%12+12)%12; }
+  render(tempH ?? state.now.h, tempM ?? state.now.m);
 }
-
 function endDrag(e){
-  if (!dragKind || (activePointerId && e.pointerId !== activePointerId)) return;
-  // 포인터 해제
-  if (minHand.releasePointerCapture) {
-    try { minHand.releasePointerCapture(activePointerId); } catch {}
-    try { hourHand.releasePointerCapture(activePointerId); } catch {}
+  if(!dragKind) return;
+  if(('pointerId' in e) && e.pointerId!==activeId) return;
+  // 스냅: 손 뗄 때만
+  if(dragKind==='m'){
+    const m=tempM ?? state.now.m;
+    const d=state.difficulty;
+    state.now.m = (d==='hour')?0 : (d==='half')?30 :
+                  (d==='ten')? Math.round(m/10)*10%60 :
+                  (d==='five')?Math.round(m/5)*5%60 : Math.round(m)%60;
+    tempM=null;
+  }else{
+    const h=tempH ?? state.now.h;
+    state.now.h = Math.round(h)%12; tempH=null;
   }
-  activePointerId = null;
+  dragKind=null; activeId=null; render();
+}
 
-  // 여기서만 스냅 적용 (5분/정시 등)
-  if (dragKind === 'm'){
-    const snapped =
-      (state.difficulty === 'hour') ? 0 :
-      (state.difficulty === 'half') ? 30 :
-      (state.difficulty === 'ten')  ? Math.round(tempMinute/10)*10 % 60 :
-      (state.difficulty === 'five') ? Math.round(tempMinute/5)*5 % 60 :
-                                      Math.round(tempMinute) % 60;
-    state.now.m = snapped;
-    tempMinute = null;
-  } else {
-    state.now.h = Math.round(tempHour) % 12;
-    tempHour = null;
+const supportsPointer = 'PointerEvent' in window;
+if (supportsPointer){
+  minHand.addEventListener('pointerdown', e=>startDrag(e,'m'), {passive:false});
+  hourHand.addEventListener('pointerdown', e=>startDrag(e,'h'), {passive:false});
+  window.addEventListener('pointermove', moveDrag, {passive:false});
+  window.addEventListener('pointerup', endDrag, {passive:false});
+  window.addEventListener('pointercancel', endDrag, {passive:false});
+}else{
+  // Touch/Mouse 폴백
+  minHand.addEventListener('touchstart', e=>startDrag(e,'m'), {passive:false});
+  hourHand.addEventListener('touchstart', e=>startDrag(e,'h'), {passive:false});
+  window.addEventListener('touchmove', moveDrag, {passive:false});
+  window.addEventListener('touchend', endDrag, {passive:false});
+  minHand.addEventListener('mousedown', e=>startDrag(e,'m'));
+  hourHand.addEventListener('mousedown', e=>startDrag(e,'h'));
+  window.addEventListener('mousemove', moveDrag);
+  window.addEventListener('mouseup', endDrag);
+}
+
+/* === 정답 체크 + 축하 === */
+function celebrate(msg='정답! 잘했어요 🎉', dur=2800){
+  const canvas = document.getElementById('celebrateCanvas');
+}
+const toastEl = document.getElementById('toast');
+function showToast(text){
+  toastEl.textContent=text; toastEl.classList.remove('show'); void toastEl.offsetWidth; toastEl.classList.add('show');
+  setTimeout(()=>toastEl.classList.remove('show'), 2400);
+}
+// 간단 컨페티
+(function(){
+  const c=document.getElementById('celebrateCanvas'), ctx=c.getContext('2d');
+  let W,H,parts=[],end=0,raf=null;
+  function resize(){W=c.width=innerWidth*devicePixelRatio;H=c.height=innerHeight*devicePixelRatio;}
+  window.addEventListener('resize',resize); resize();
+  const Col=['#ffd480','#9ad0ff','#ff95c8','#7c4dff','#7ee5a5','#fff'];
+  function R(a,b){return Math.random()*(b-a)+a}
+  function spawn(n=120){
+    parts=[];
+    for(let i=0;i<n;i++)
+      parts.push({x:R(0,W),y:R(-H*.2,-20),vx:R(-1,1),vy:R(1.2,3),g:R(.008,.02),s:R(6,14),r:R(0,6.28),vr:R(-.08,.08),c:Col[(Math.random()*Col.length)|0],a:R(.7,1)});
   }
-  dragKind = null;
-  renderHands(); // 최종 스냅된 값으로 그리기
+  function tick(){
+    ctx.clearRect(0,0,W,H);
+    for(const p of parts){
+      p.vy+=p.g; p.x+=p.vx; p.y+=p.vy; p.r+=p.vr;
+      ctx.globalAlpha=p.a; ctx.fillStyle=p.c;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.r);
+      ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s);
+      ctx.restore(); ctx.globalAlpha=1;
+    }
+    if(Date.now()<end) raf=requestAnimationFrame(tick);
+    else { ctx.clearRect(0,0,W,H); cancelAnimationFrame(raf); }
+  }
+  window.triggerCelebration=(text='정답! 잘했어요 🎉', ms=2800)=>{
+    showToast(text); spawn(); end=Date.now()+ms; tick();
+  };
+})();
+
+$('#checkSet').addEventListener('click', ()=>{
+  const ok = (state.now.h%12)===(state.target.h%12) && state.now.m===state.target.m;
+  const res = $('#resultSet');
+  if(ok){ res.textContent='정답! 잘했어요 🎉'; res.className='result ok'; triggerCelebration(); }
+  else { res.textContent=`아쉬워요! 정답은 ${label(state.target.h,state.target.m)}`; res.className='result bad'; }
+});
+$('#showAnswerSet').addEventListener('click', ()=>{
+  state.now={...state.target}; render();
+});
+
+/* === 읽어주기 + 타이핑 === */
+let _timer=null;
+function typeOut(el,text,speed=28){
+  if(_timer){clearInterval(_timer);_timer=null;}
+  el.classList.remove('done'); el.textContent='';
+  let i=0; _timer=setInterval(()=>{ el.textContent=text.slice(0,i++); if(i>text.length){clearInterval(_timer);_timer=null; el.classList.add('done');}},speed);
 }
-
-/* 리스너 – 반드시 passive:false */
-minHand.addEventListener('pointerdown', e => startDrag(e, 'm'), { passive: false });
-hourHand.addEventListener('pointerdown', e => startDrag(e, 'h'), { passive: false });
-window.addEventListener('pointermove', moveDrag, { passive: false });
-window.addEventListener('pointerup', endDrag, { passive: false });
-window.addEventListener('pointercancel', endDrag, { passive: false });
-
-/* 부드러운 실시간 렌더(드래그 중) */
-function renderHandsSmooth(){
-  // 분침
-  const m = (tempMinute != null) ? tempMinute : state.now.m;
-  const h = (tempHour   != null) ? tempHour   : (state.now.h % 12);
-  const minuteAngle = m * 6;            // 실수 각도 OK
-  const hourAngle   = h * 30 + (m * 0.5);
-
-  minHand.setAttribute('transform', `rotate(${minuteAngle} 100 100)`);
-  hourHand.setAttribute('transform', `rotate(${hourAngle} 100 100)`);
+function loadVoices(){return new Promise(r=>{const v=speechSynthesis.getVoices(); if(v&&v.length) r(v); else speechSynthesis.onvoiceschanged=()=>r(speechSynthesis.getVoices());});}
+async function speak(){
+  const out=$('#readText'); const h=((state.now.h%12)+12)%12||12, m=state.now.m;
+  const txt=(m===0)?`지금은 ${h}시 정각이에요.`:`지금은 ${h}시 ${m}분이에요.`;
+  typeOut(out, txt);
+  try{
+    const vs=await loadVoices(); const v=vs.find(v=>v.lang?.toLowerCase().startsWith('ko'))||vs[0];
+    speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(txt);
+    u.lang=v?.lang||'ko-KR'; u.voice=v||null; u.rate=.95; speechSynthesis.speak(u);
+  }catch{}
 }
-
-let startX=0, startY=0;
-function startDrag(e, kind){
-  e.preventDefault();
-  startX = e.clientX; startY = e.clientY;
-  dragKind = kind; activePointerId = e.pointerId;
-  const t = (kind === 'm') ? minHand : hourHand;
-  t.setPointerCapture?.(activePointerId);
-}
-function moveDrag(e){
-  if (!dragKind || e.pointerId !== activePointerId) return;
-  const dx = e.clientX - startX, dy = e.clientY - startY;
-  if ((dx*dx + dy*dy) < 25) { e.preventDefault(); return; } // 5px 데드존
-  // (이하 동일)
-}
-
-
-
-      /* ========= 초기화 ========= */
-      loadStats();
-      renderHands();
-      updateLabels();
-      newQuestion();
-    </script>
-  </body>
+$('#btnReadTime').addEventListener('click', speak, {passive:true});
+</script>
+</body>
 </html>
