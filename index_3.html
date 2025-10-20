@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>시계 공부</title>
+    <title>시계 공부 – 초1 놀이앱</title>
     <style>
       :root {
         --bg: #0b0c10;
@@ -59,15 +59,6 @@
       .dot.hour { background: #ffd480 }
       .sr-only { position: absolute; left: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden }
       .footer { color: var(--muted); font-size: .9rem; margin-top: 14px }
-    /* 모바일 드래그 안정화 */
-html, body { overscroll-behavior: none; }
-.clock-wrap, svg { -webkit-user-select: none; user-select: none; }
-#clock, #minuteHand, #hourHand { touch-action: none; } /* 터치 제스처(스크롤/줌) 차단 */
-
-/* 손잡이(히트영역) 살짝 확대 – 보이지 않음 */
-#minuteHand, #hourHand { pointer-events: all; }
-#minuteHand .hit, #hourHand .hit { fill: transparent; pointer-events: all; }
-
     </style>
   </head>
   <body>
@@ -92,11 +83,6 @@ html, body { overscroll-behavior: none; }
               <!-- 외곽 원 -->
               <circle cx="100" cy="100" r="94" fill="#0a0b10" stroke="#2c3150" stroke-width="2"></circle>
               <circle cx="100" cy="100" r="92" fill="#0f1119" stroke="#3a406b" stroke-width="1"></circle>
-
-              <!-- 분침 g 내부 끝쪽에 -->
-<circle class="hit" cx="100" cy="36" r="18"></circle>
-<!-- 시침 g 내부 끝쪽에 -->
-<circle class="hit" cx="100" cy="56" r="18"></circle>
 
               <!-- 눈금 -->
               <g id="ticks"></g>
@@ -563,83 +549,6 @@ async function speakTime() {
     });
   }
 })();
-
-
-/* ===== 드래그(모바일 안정화) ===== */
-let dragKind = null;
-let activePointerId = null;
-let tempMinute = null;  // 드래그 중에는 '부드럽게' 따라가고
-let tempHour = null;    // 포인터를 떼는 순간에만 스냅
-
-function startDrag(e, kind){
-  e.preventDefault();
-  dragKind = kind;
-  activePointerId = e.pointerId;
-  const target = (kind === 'm') ? minHand : hourHand;
-  if (target.setPointerCapture) target.setPointerCapture(activePointerId);
-}
-
-function moveDrag(e){
-  if (!dragKind || e.pointerId !== activePointerId) return;
-  e.preventDefault();
-  const deg = angleFromPoint(e.clientX, e.clientY);
-
-  if (dragKind === 'm'){
-    // 이동 중엔 '부드럽게' 각도로부터 분을 실수형으로 계산해서 표시만 부드럽게
-    const raw = deg / 6;             // 0..60 float
-    tempMinute = ((raw % 60) + 60) % 60;
-  } else {
-    const raw = deg / 30;            // 0..12 float
-    tempHour = ((raw % 12) + 12) % 12;
-  }
-  renderHandsSmooth();
-}
-
-function endDrag(e){
-  if (!dragKind || (activePointerId && e.pointerId !== activePointerId)) return;
-  // 포인터 해제
-  if (minHand.releasePointerCapture) {
-    try { minHand.releasePointerCapture(activePointerId); } catch {}
-    try { hourHand.releasePointerCapture(activePointerId); } catch {}
-  }
-  activePointerId = null;
-
-  // 여기서만 스냅 적용 (5분/정시 등)
-  if (dragKind === 'm'){
-    const snapped =
-      (state.difficulty === 'hour') ? 0 :
-      (state.difficulty === 'half') ? 30 :
-      (state.difficulty === 'ten')  ? Math.round(tempMinute/10)*10 % 60 :
-      (state.difficulty === 'five') ? Math.round(tempMinute/5)*5 % 60 :
-                                      Math.round(tempMinute) % 60;
-    state.now.m = snapped;
-    tempMinute = null;
-  } else {
-    state.now.h = Math.round(tempHour) % 12;
-    tempHour = null;
-  }
-  dragKind = null;
-  renderHands(); // 최종 스냅된 값으로 그리기
-}
-
-/* 리스너 – 반드시 passive:false */
-minHand.addEventListener('pointerdown', e => startDrag(e, 'm'), { passive: false });
-hourHand.addEventListener('pointerdown', e => startDrag(e, 'h'), { passive: false });
-window.addEventListener('pointermove', moveDrag, { passive: false });
-window.addEventListener('pointerup', endDrag, { passive: false });
-window.addEventListener('pointercancel', endDrag, { passive: false });
-
-/* 부드러운 실시간 렌더(드래그 중) */
-function renderHandsSmooth(){
-  // 분침
-  const m = (tempMinute != null) ? tempMinute : state.now.m;
-  const h = (tempHour   != null) ? tempHour   : (state.now.h % 12);
-  const minuteAngle = m * 6;            // 실수 각도 OK
-  const hourAngle   = h * 30 + (m * 0.5);
-
-  minHand.setAttribute('transform', `rotate(${minuteAngle} 100 100)`);
-  hourHand.setAttribute('transform', `rotate(${hourAngle} 100 100)`);
-}
 
 
 
