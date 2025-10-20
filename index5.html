@@ -31,12 +31,11 @@
   .big{font-size:1.2rem}
   .result{margin-top:8px;font-weight:700}
   .result.ok{color:var(--ok)} .result.bad{color:var(--bad)}
-
   .clock-wrap{display:flex;justify-content:center;align-items:center;padding:10px;-webkit-user-select:none;user-select:none;touch-action:none}
   svg{max-width:420px;width:100%;height:auto;touch-action:none}
-  #clock,#minuteHand,#hourHand{touch-action:none}
+  #clock, #minuteHand, #hourHand { touch-action:none; }
   /* 바늘 잡기 쉬운 투명 히트영역 */
-  #minuteHand .hit,#hourHand .hit{fill:transparent;pointer-events:all}
+  #minuteHand .hit, #hourHand .hit { fill: transparent; pointer-events: all; }
 
   /* 읽기 버튼 + 타이핑 */
   #btnReadTime{transition:transform .15s ease, box-shadow .15s ease}
@@ -95,7 +94,7 @@
         <button id="btnReadTime" class="primary">🗣️ 지금 시각 읽기</button>
       </div>
       <div id="readText" class="typing" aria-live="polite" aria-atomic="true"></div>
-      <p class="hint" style="text-align:center">모바일에선 한 손가락으로 분침을 돌려보세요. 계속 돌리면 시침도 함께 넘어가요.</p>
+      <p class="hint" style="text-align:center">모바일에선 한 손가락으로 바늘을 천천히 끌어보세요.</p>
     </section>
 
     <!-- 게임 패널 -->
@@ -118,7 +117,7 @@
         <button id="showAnswerSet">정답 보기</button>
         <span id="resultSet" class="result"></span>
       </div>
-      <p class="hint">정답 조건: 시침(12시간 기준)과 분침이 목표 시간과 동일</p>
+      <p class="hint">분침을 계속 돌리면 시침이 함께 돌아가요.</p>
     </section>
   </div>
 </div>
@@ -128,16 +127,40 @@
 <div id="toast" class="toast">정답! 잘했어요 🎉</div>
 
 <script>
-/* ===== 상태/유틸 ===== */
+/* ===== 기본 상태/유틸 ===== */
 const $ = s => document.querySelector(s);
 const svg = $('#clock'), ticks = $('#ticks'), minHand = $('#minuteHand'), hourHand = $('#hourHand');
-
-/* 절대 시(hourAbs) + 분(m)로 관리 */
+// 기존: const state = { now:{h:3,m:0}, ... }
+// 교체:
 const state = { now:{ hourAbs: 3, m: 0 }, target:{h:3,m:0}, difficulty:'five' };
+
+// 렌더 함수 교체
+function render(hAbs = state.now.hourAbs, mm = state.now.m){
+  const m = mm;
+  const h12 = ((hAbs % 12) + 12) % 12;      // 표시용 12시간
+  const minuteAngle = m * 6;                // 6도/분
+  const hourAngle   = h12 * 30 + m * 0.5;   // 30도/시 + 분 보정
+  minHand.setAttribute('transform', `rotate(${minuteAngle} 100 100)`);
+  hourHand.setAttribute('transform', `rotate(${hourAngle} 100 100)`);
+}
+
+//const state = { now:{h:3,m:0}, target:{h:3,m:0}, difficulty:'five' };
+
+function newQ(){
+  const diff = state.difficulty || 'five';
+  state.target = randomTime(diff);
+
+  const init = randomTime(diff);
+  state.now.hourAbs = init.h;   // 절대 시
+  state.now.m       = init.m;
+
+  document.getElementById('targetLabel').textContent =
+    `${((state.target.h%12)+12)%12||12}시 ${String(state.target.m).padStart(2,'0')}분`;
+  render();
+}
 
 const pad2 = n => String(n).padStart(2,'0');
 const labelTime = (h,m)=>`${((h%12)+12)%12||12}시 ${pad2(m)}분`;
-const mod = (n,m)=>((n % m) + m) % m;
 
 /* 눈금 만들기 */
 (function buildTicks(){
@@ -162,22 +185,15 @@ const mod = (n,m)=>((n % m) + m) % m;
 })();
 
 /* 렌더링 */
-function render(hAbs = state.now.hourAbs, mm = state.now.m){
-  const m = mm;
-  const h12 = ((hAbs % 12) + 12) % 12;
-  const minuteAngle = m * 6;
-  const hourAngle   = h12 * 30 + m * 0.5;
-  minHand.setAttribute('transform',`rotate(${minuteAngle} 100 100)`);
-  hourHand.setAttribute('transform',`rotate(${hourAngle} 100 100)`);
+function render(hh=state.now.h, mm=state.now.m){
+  const m=mm, h=((hh%12)+12)%12;
+  const ma=m*6;                 // 6도/분
+  const ha=h*30 + m*0.5;        // 30도/시 + 분 보정
+  minHand.setAttribute('transform',`rotate(${ma} 100 100)`);
+  hourHand.setAttribute('transform',`rotate(${ha} 100 100)`);
 }
 
 /* 문제 생성/표시 */
-function stepMinutes(diff){
-  return diff==='hour' ? 60 :
-         diff==='half' ? 30 :
-         diff==='ten'  ? 10 :
-         diff==='five' ? 5  : 1;
-}
 function randomTime(diff){
   let h=Math.floor(Math.random()*12), m=0;
   if(diff==='hour') m=0;
@@ -190,10 +206,10 @@ function randomTime(diff){
 function newQ(){
   const diff = state.difficulty || 'five';
   state.target = randomTime(diff);
-  const init   = randomTime(diff);
-  state.now.hourAbs = init.h;
-  state.now.m       = init.m;
-  $('#targetLabel').textContent = labelTime(state.target.h,state.target.m);
+  // 현재값은 다른 임의값으로 초기화
+  const init = randomTime(diff);
+  state.now.h = init.h; state.now.m = init.m;
+  $('#targetLabel').textContent = labelTime(state.target.h, state.target.m);
   render();
 }
 $('#difficulty').addEventListener('change', e=>{ state.difficulty=e.target.value; newQ(); });
@@ -207,112 +223,146 @@ function angleFromPoint(clientX, clientY){
   let deg = Math.atan2(sx-100, -(sy-100))*180/Math.PI; if(deg<0)deg+=360; return deg;
 }
 
-/* ===== 드래그(모바일 안정화 + 분침 누적 → 시침 정확 반영) ===== */
-let dragKind=null, activeId=null, startX=0, startY=0;
+/* ===== 드래그(모바일 안정화 + 분침 돌리면 시침 누적) ===== */
+let dragKind = null, activeId = null, startX = 0, startY = 0;
 
-/* 분침 누적 회전용 */
-let originHourAbs=0, originMinute=0, lastMFloat=null, accDeltaMin=0;
-let tempM=null, tempHAbs=null;
+// 분침 누적 회전용
+let originHourAbs = 0;     // 드래그 시작 시 절대 시
+let originMinute  = 0;     // 드래그 시작 시 분(0..59)
+let lastMFloat    = null;  // 지난 프레임의 분(0..60 float)
+let accDeltaMin   = 0;     // 누적 이동 분(음수/양수)
+let tempM = null, tempHAbs = null;
+
+// 각도 계산 유틸은 기존 angleFromPoint 사용
 
 function getPoint(evt){
   if (evt.touches && evt.touches[0]) return {x:evt.touches[0].clientX, y:evt.touches[0].clientY, id:0};
   if (evt.changedTouches && evt.changedTouches[0]) return {x:evt.changedTouches[0].clientX, y:evt.changedTouches[0].clientY, id:0};
   return {x:evt.clientX, y:evt.clientY, id:evt.pointerId};
 }
+
+// 난이도→스텝(분) 매핑
+function stepMinutes(diff){
+  return diff==='hour' ? 60 :
+         diff==='half' ? 30 :
+         diff==='ten'  ? 10 :
+         diff==='five' ? 5  : 1;
+}
+
+// JS 음수 나머지 보정
+const mod = (n, m) => ((n % m) + m) % m;
+
 function startDrag(e, kind){
   e.preventDefault();
-  const p=getPoint(e);
-  dragKind=kind; activeId=('pointerId' in e)? e.pointerId : 0;
-  startX=p.x; startY=p.y;
+  const p = getPoint(e);
+  dragKind = kind; activeId = ('pointerId' in e) ? e.pointerId : 0;
+  startX = p.x; startY = p.y;
 
-  if(kind==='m'){
+  if (kind === 'm'){
     originHourAbs = state.now.hourAbs;
     originMinute  = state.now.m;
-    const deg = angleFromPoint(p.x,p.y);
-    lastMFloat = mod(deg/6,60);
+    // 현재 각도→분(부동)으로 초기화
+    const deg = angleFromPoint(p.x, p.y);
+    lastMFloat = mod(deg/6, 60);
     accDeltaMin = 0;
   }
-  const t=(kind==='m')?minHand:hourHand;
+  const t = (kind === 'm') ? minHand : hourHand;
   t.setPointerCapture?.(activeId);
 }
+
 function moveDrag(e){
-  if(!dragKind) return;
-  if(('pointerId' in e) && e.pointerId!==activeId) return;
-  const p=getPoint(e); e.preventDefault();
+  if (!dragKind) return;
+  if (('pointerId' in e) && e.pointerId !== activeId) return;
+  const p = getPoint(e);
+  e.preventDefault();
 
-  const dx=p.x-startX, dy=p.y-startY; if((dx*dx+dy*dy)<25) return; // 5px 데드존
-  const deg=angleFromPoint(p.x,p.y);
+  // 5px 데드존
+  const dx = p.x - startX, dy = p.y - startY;
+  if ((dx*dx + dy*dy) < 25) return;
 
-  if(dragKind==='m'){
-    const mFloat = mod(deg/6,60);
-    let delta = mFloat - lastMFloat;
+  const deg = angleFromPoint(p.x, p.y);
+
+  if (dragKind === 'm'){
+    const mFloat = mod(deg/6, 60); // 0..60 float
+    // 래핑 보정: 큰 점프를 연속 이동으로 환산
+    let delta = mFloat - lastMFloat;      // -60..60
     if (delta > 30)  delta -= 60;
     if (delta < -30) delta += 60;
-    accDeltaMin += delta;
+
+    accDeltaMin += delta;                 // 누적 분 이동
     lastMFloat   = mFloat;
 
-    const totalMin   = originMinute + accDeltaMin;   // 연속 분(음/양수)
-    const hourOffset = Math.floor(totalMin / 60);
+    // 미리보기(스냅 없이 부드럽게)
+    const totalMin   = originMinute + accDeltaMin;        // 기준 분 + 누적 이동
+    const hourOffset = Math.floor(totalMin / 60);         // 음수도 OK
     const previewMin = mod(totalMin, 60);
     const previewH   = originHourAbs + hourOffset;
 
-    tempM = previewMin; tempHAbs = previewH;
+    tempM   = previewMin;
+    tempHAbs= previewH;
     render(tempHAbs, tempM);
-  }else{
-    // 시침 직접 드래그: 가장 가까운 절대 시로 미리보기
-    const hFloat = mod(deg/30,12);
-    const roundH12 = Math.round(hFloat) % 12;
-    const base = Math.floor(state.now.hourAbs/12);
-    const cands = [base-1, base, base+1].map(b=>b*12 + roundH12);
-    tempHAbs = cands.sort((a,b)=>Math.abs(a-state.now.hourAbs)-Math.abs(b-state.now.hourAbs))[0];
+  } else {
+    // 시침 직접 드래그: 부드러운 미리보기(정수 스냅은 end에서)
+    const hFloat = mod(deg/30, 12);
+    tempHAbs = Math.round(hFloat) + Math.floor(state.now.hourAbs/12)*12; // 가까운 시간대로
     render(tempHAbs, state.now.m);
   }
 }
+
 function endDrag(e){
-  if(!dragKind) return;
-  if(('pointerId' in e) && e.pointerId!==activeId) return;
+  if (!dragKind) return;
+  if (('pointerId' in e) && e.pointerId !== activeId) return;
 
-  if(dragKind==='m'){
-    const step = stepMinutes(state.difficulty);
-    const totalMin     = originMinute + accDeltaMin;
-    const roundedTotal = Math.round(totalMin / step) * step;
-    const hourOffset   = Math.floor(roundedTotal / 60);
-    const newMinute    = mod(roundedTotal,60);
-    const newHourAbs   = originHourAbs + hourOffset;
+  if (dragKind === 'm'){
+    // 누적 분(total)에서 바로 스냅(정확!)
+    const step = stepMinutes(state.difficulty);   // 60/30/10/5/1
+    const totalMin      = originMinute + accDeltaMin;      // 실수
+    const totalRounded  = Math.round(totalMin / step) * step; // 스냅된 전체 분
+    const hourOffset    = Math.floor(totalRounded / 60);
+    const newMinute     = mod(totalRounded, 60);
+    const newHourAbs    = originHourAbs + hourOffset;
 
-    state.now.m = newMinute;
+    state.now.m       = newMinute;
     state.now.hourAbs = newHourAbs;
 
-    tempM=null; tempHAbs=null; lastMFloat=null; accDeltaMin=0;
-  }else{
+    // 임시값 초기화
+    tempM = tempHAbs = null; lastMFloat = null; accDeltaMin = 0;
+  } else {
+    // 시침 드래그 끝: 정수 시로 스냅 (현재 구간에서 가장 가까운 정수 시)
     state.now.hourAbs = tempHAbs ?? state.now.hourAbs;
-    tempHAbs=null;
+    tempHAbs = null;
   }
-  dragKind=null; activeId=null;
-  render();
+
+  dragKind = null; activeId = null;
+  render(); // 최종 반영
 }
 
-minHand.addEventListener('pointerdown', e=>startDrag(e,'m'), {passive:false});
-hourHand.addEventListener('pointerdown', e=>startDrag(e,'h'), {passive:false});
-window.addEventListener('pointermove', moveDrag, {passive:false});
-window.addEventListener('pointerup', endDrag, {passive:false});
-window.addEventListener('pointercancel', endDrag, {passive:false});
+// 리스너
+minHand.addEventListener('pointerdown', e=>startDrag(e,'m'), { passive:false });
+hourHand.addEventListener('pointerdown', e=>startDrag(e,'h'), { passive:false });
+window.addEventListener('pointermove',  moveDrag,          { passive:false });
+window.addEventListener('pointerup',    endDrag,           { passive:false });
+window.addEventListener('pointercancel',endDrag,           { passive:false });
+
+
 
 /* ===== 정답 확인 & 보기 ===== */
 function checkAnswer(){
-  const nowH12 = mod(state.now.hourAbs,12);
-  const tgtH12 = mod(state.target.h,12);
-  const ok = (nowH12===tgtH12) && (state.now.m===state.target.m);
-  const res = $('#resultSet');
+  const nowH12 = ((state.now.hourAbs % 12) + 12) % 12;
+  const tgtH12 = ((state.target.h     % 12) + 12) % 12;
+  const ok = (nowH12 === tgtH12) && (state.now.m === state.target.m);
+  const res = document.getElementById('resultSet');
   if(ok){
     res.textContent='정답! 잘했어요 🎉'; res.className='result ok';
     triggerCelebration('정답! 잘했어요 🎉', 3000);
   }else{
-    res.textContent=`아쉬워요! 정답은 ${labelTime(state.target.h,state.target.m)}`; res.className='result bad';
+    res.textContent=`아쉬워요! 정답은 ${((tgtH12||12))}시 ${String(state.target.m).padStart(2,'0')}분`;
+    res.className='result bad';
   }
 }
+
 $('#checkSet').addEventListener('click', checkAnswer);
-$('#showAnswerSet').addEventListener('click', ()=>{ state.now.hourAbs = state.target.h; state.now.m = state.target.m; render(); });
+$('#showAnswerSet').addEventListener('click', ()=>{ state.now={...state.target}; render(); });
 
 /* ===== 읽어주기 + 타이핑 ===== */
 let _typeTimer=null;
@@ -323,8 +373,7 @@ function typeOut(el,text,speed=28){
 }
 function loadVoices(){return new Promise(r=>{const v=speechSynthesis.getVoices(); if(v&&v.length) r(v); else speechSynthesis.onvoiceschanged=()=>r(speechSynthesis.getVoices());});}
 async function speakNow(){
-  const out=$('#readText');
-  const h=((state.now.hourAbs%12)+12)%12||12, m=state.now.m;
+  const out=$('#readText'); const h=((state.now.h%12)+12)%12||12, m=state.now.m;
   const txt = (m===0) ? `지금은 ${h}시 정각이에요.` : `지금은 ${h}시 ${m}분이에요.`;
   typeOut(out, txt);
   try{
