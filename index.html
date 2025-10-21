@@ -139,27 +139,65 @@ const pad2 = n => String(n).padStart(2,'0');
 const labelTime = (h,m)=>`${((h%12)+12)%12||12}시 ${pad2(m)}분`;
 const mod = (n,m)=>((n % m) + m) % m;
 
-/* 눈금 만들기 */
+
 (function buildTicks(){
-  const cx=100,cy=100,rO=86,rI=80,rH=76;
-  for(let i=0;i<60;i++){
-    const a=(i/60)*2*Math.PI, isH=i%5===0;
-    const r1=isH?rH:rI, x1=cx+r1*Math.sin(a), y1=cy-r1*Math.cos(a);
-    const x2=cx+rO*Math.sin(a), y2=cy-rO*Math.cos(a);
-    const ln=document.createElementNS('http://www.w3.org/2000/svg','line');
-    ln.setAttribute('x1',x1); ln.setAttribute('y1',y1);
-    ln.setAttribute('x2',x2); ln.setAttribute('y2',y2);
-    ln.setAttribute('stroke',isH?'#9aa3d4':'#4a4f77'); ln.setAttribute('stroke-width',isH?'2.2':'1.1');
-    ticks.appendChild(ln);
-    if(isH){
-      const num=(i/5)||12, rn=66, tx=cx+rn*Math.sin(a), ty=cy-rn*Math.cos(a)+4;
-      const t=document.createElementNS('http://www.w3.org/2000/svg','text');
-      t.setAttribute('x',tx); t.setAttribute('y',ty); t.setAttribute('fill','#cdd2ff');
-      t.setAttribute('font-size','10'); t.setAttribute('text-anchor','middle'); t.textContent=num;
-      ticks.appendChild(t);
+  const cx=100, cy=100;
+  const rOuter=86, rInner=80, rHourTick=76;
+  const rHourNum = 66;
+  const rMinNum  = 92;
+
+  for (let i = 0; i < 60; i++) {
+    const a = (i / 60) * 2 * Math.PI;
+    const isHourMark = i % 5 === 0;
+
+    // 눈금
+    {
+      const r1 = isHourMark ? rHourTick : rInner;
+      const x1 = cx + r1 * Math.sin(a);
+      const y1 = cy - r1 * Math.cos(a);
+      const x2 = cx + rOuter * Math.sin(a);
+      const y2 = cy - rOuter * Math.cos(a);
+      const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      ln.setAttribute('x1', x1); ln.setAttribute('y1', y1);
+      ln.setAttribute('x2', x2); ln.setAttribute('y2', y2);
+      ln.setAttribute('stroke', isHourMark ? '#9aa3d4' : '#4a4f77');
+      ln.setAttribute('stroke-width', isHourMark ? '2.2' : '1.1');
+      ticks.appendChild(ln);
+    }
+
+    if (isHourMark) {
+      // 시(1~12)
+      const hourNum = (i / 5) || 12;
+      const txH = cx + rHourNum * Math.sin(a);
+      const tyH = cy - rHourNum * Math.cos(a) + 4;
+      const tH = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      tH.setAttribute('x', txH);
+      tH.setAttribute('y', tyH);
+      tH.setAttribute('fill', '#cdd2ff');
+      tH.setAttribute('font-size', '10');
+      tH.setAttribute('text-anchor', 'middle');
+      tH.setAttribute('pointer-events', 'none');
+      tH.textContent = hourNum;
+      ticks.appendChild(tH);
+
+      // 분 숫자: 0 → 60 표시
+      const minuteLabel = (i === 0) ? 60 : i;
+      const txM = cx + rMinNum * Math.sin(a);
+      const tyM = cy - rMinNum * Math.cos(a) - 2;
+      const tM = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      tM.setAttribute('x', txM);
+      tM.setAttribute('y', tyM);
+      tM.setAttribute('fill', '#7f86b7');
+      tM.setAttribute('font-size', '7');
+      tM.setAttribute('text-anchor', 'middle');
+      tM.setAttribute('pointer-events', 'none');
+      tM.textContent = minuteLabel; // 5,10,...,55,60
+      ticks.appendChild(tM);
     }
   }
 })();
+
+
 
 /* 렌더링 */
 function render(hAbs = state.now.hourAbs, mm = state.now.m){
