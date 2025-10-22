@@ -35,6 +35,7 @@
   .clock-wrap{display:flex;justify-content:center;align-items:center;padding:10px;-webkit-user-select:none;user-select:none;touch-action:none}
   svg{max-width:420px;width:100%;height:auto;touch-action:none}
   #clock,#minuteHand,#hourHand{touch-action:none}
+  /* 바늘 잡기 쉬운 투명 히트영역 */
   #minuteHand .hit,#hourHand .hit{fill:transparent;pointer-events:all}
 
   /* 읽기 버튼 + 타이핑 */
@@ -54,21 +55,9 @@
   @keyframes pop{0%{opacity:0;transform:translate(-50%,-10%) scale(.92)}45%{opacity:1;transform:translate(-50%,0) scale(1.02)}100%{opacity:1;transform:translate(-50%,0) scale(1)}}
   .celebrate{position:fixed;inset:0;pointer-events:none;z-index:9999}
 
-  /* 분(5,10,...,60) 레이블 토글 */
+    /* ...기존 스타일 그대로 두고 아래 2줄만 추가 */
   #minLabels { opacity:0; transition: opacity .25s ease; }
   #minLabels.show { opacity:1; }
-
-  /* ===== “문구 자리”에 모바일에서만 버튼 노출 ===== */
-  .mobile-inline-actions{
-    display:none;               /* 기본: 데스크톱/태블릿 숨김 */
-    justify-content:center;
-    gap:10px;
-    margin-top:8px;
-  }
-  @media (max-width: 640px){
-    #touchHint{ display:none; } /* 문구 숨기기 */
-    .mobile-inline-actions{ display:flex; } /* 버튼 보이기 */
-  }
 </style>
 </head>
 
@@ -109,17 +98,8 @@
       <div class="controls" style="justify-content:center; margin-top:10px">
         <button id="btnReadTime" class="primary">🗣️ 지금 시각 읽기</button>
       </div>
-
-      <!-- ⬇⬇ 이 문구 ‘자리에’ 모바일이면 버튼이 나타나도록 처리 -->
-      <p class="hint" id="touchHint" style="text-align:center">
-        모바일에선 한 손가락으로 분침을 돌려보세요. 계속 돌리면 시침도 함께 넘어가요.
-      </p>
-      <div class="mobile-inline-actions" aria-label="모바일 액션">
-        <button id="miCheck">정답 확인</button>
-        <button id="miNew" class="primary">새 문제</button>
-      </div>
-      <!-- ⬆⬆ 끝 -->
-
+      <div id="readText" class="typing" aria-live="polite" aria-atomic="true"></div>
+      <p class="hint" style="text-align:center">모바일에선 한 손가락으로 분침을 돌려보세요. 계속 돌리면 시침도 함께 넘어가요.</p>
     </section>
 
     <!-- 게임 패널 -->
@@ -373,10 +353,6 @@ function checkAnswer(){
 $('#checkSet').addEventListener('click', checkAnswer);
 $('#showAnswerSet').addEventListener('click', ()=>{ state.now.hourAbs = state.target.h; state.now.m = state.target.m; render(); });
 
-/* 모바일(문구 자리) 버튼도 동일 함수에 연결 */
-document.getElementById('miCheck').addEventListener('click', checkAnswer);
-document.getElementById('miNew').addEventListener('click', newQ);
-
 /* ===== 읽어주기 + 타이핑 ===== */
 let _typeTimer=null;
 function typeOut(el,text,speed=28){
@@ -435,10 +411,17 @@ function showToast(text){
   };
 })();
 
-// 분 숫자 보이기 토글
+
+// ...기존 스크립트 아래쪽 적당한 위치에 추가
 const minLabelsG = document.getElementById('minLabels');
+
+// 처음엔 숨김(기본 opacity 0)
 minLabelsG.classList.remove('show');
-document.getElementById('clock').addEventListener('click', ()=>{ minLabelsG.classList.toggle('show'); });
+
+// 시계를 클릭하면 토글(원하면 '한 번만 보이기'로 바꿔도 됨)
+document.getElementById('clock').addEventListener('click', ()=>{
+  minLabelsG.classList.toggle('show');
+});
 
 /* 초기화 */
 window.addEventListener('DOMContentLoaded', ()=>{ newQ(); render(); });
