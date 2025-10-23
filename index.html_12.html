@@ -58,27 +58,16 @@
   #minLabels { opacity:0; transition: opacity .25s ease; }
   #minLabels.show { opacity:1; }
 
-  /* ===== 반응형: 모바일 전용 상단 컨트롤(시계 위에) ===== */
-  .clock-actions{
-    display:none;                     /* 기본(PC): 숨김, 모바일에서만 표시 */
-    gap:8px;
-    align-items:center;
+  /* 모바일에서만 버튼 노출 */
+  .mobile-inline-actions{
+    display:none;
     justify-content:center;
-    margin:4px 0 6px;
-    flex-wrap:wrap;
+    gap:10px;
+    margin-top:8px;
   }
-  .clock-actions .result-inline{min-height:1.4em}
-
-  /* 모바일에서만 버튼/컨트롤 노출, 게임패널 숨김 */
   @media (max-width: 640px){
-    .game-panel{ display:none; }      /* 모바일: 우측 패널(게임 패널) 숨김 */
-    .clock-actions{ display:flex; }   /* 모바일: 시계 위 컨트롤 보이기 */
     #touchHint{ display:none; }
-  }
-
-  /* PC 전용: 게임 패널 유지 */
-  @media (min-width: 641px){
-    .game-panel{ display:block; }
+    .mobile-inline-actions{ display:flex; }
   }
 </style>
 </head>
@@ -86,32 +75,16 @@
 <body>
 <header>
   <div class="bar">
-    <div class="title">🕒 시계 퀴즈 : <strong id="targetLabel">—</strong> 을 아래 시계에 표시 하세요.</div>
+    <div class="title">🕒 시계 공부 – 초1 놀이앱</div>
+    <div class="pill" style="margin-left:auto">🎯 목표: <strong id="targetLabel">—</strong></div>
   </div>
 </header>
 
 <div class="container">
   <div class="row">
-    <!-- 시계 카드 -->
+    <!-- 시계 -->
     <section class="card grow" aria-labelledby="learn-clock">
-      <!-- ✅ (모바일 전용) 시계 위 컨트롤: 난이도/새문제/정답확인/정답보기/결과 -->
-      <div class="clock-actions" aria-label="모바일 상단 컨트롤">
-        <label style="display:flex;align-items:center;gap:6px">
-          <span class="hint">난이도</span>
-          <select id="difficultyMobile">
-            <option value="hour">정시</option>
-            <option value="half">30분</option>
-            <option value="ten">10분</option>
-            <option value="five" selected>5분</option>
-            <option value="one">1분</option>
-          </select>
-        </label>
-        <button id="newQMobile" class="primary">새 문제</button>
-        <button id="checkInline">정답 확인</button>
-        <button id="showAnswerInline">정답 보기</button>
-        <span id="resultInline" class="result result-inline"></span>
-      </div>
-
+      <h2 id="learn-clock" style="margin:6px 0 8px">아날로그 시계</h2>
       <div class="clock-wrap">
         <svg id="clock" viewBox="0 0 200 200" role="img" aria-label="학습용 시계">
           <circle cx="100" cy="100" r="94" fill="#0a0b10" stroke="#2c3150" stroke-width="2"/>
@@ -137,17 +110,21 @@
         <button id="btnReadTime" class="primary">🗣️ 지금 시각 읽기</button>
       </div>
 
-      <!-- 읽은 문장 출력 -->
+      <!-- 읽은 문장 출력 영역 (추가됨) -->
       <div id="readText" class="typing" aria-live="polite"></div>
 
-      <!-- 모바일 안내/버튼(유지) -->
+      <!-- 모바일 안내/버튼 -->
       <p class="hint" id="touchHint" style="text-align:center">
         모바일에선 한 손가락으로 분침을 돌려보세요. 계속 돌리면 시침도 함께 넘어가요.
       </p>
+      <div class="mobile-inline-actions" aria-label="모바일 액션">
+        <button id="miCheck">정답 확인</button>
+        <button id="miNew" class="primary">새 문제</button>
+      </div>
     </section>
 
-    <!-- PC에서만 보이는 게임 패널 -->
-    <section class="card grow game-panel" aria-labelledby="game-panel">
+    <!-- 게임 패널 -->
+    <section class="card grow" aria-labelledby="game-panel">
       <h2 id="game-panel" style="margin:6px 0 8px">게임 패널</h2>
       <div class="controls">
         <label>난이도
@@ -187,7 +164,6 @@ const pad2 = n => String(n).padStart(2,'0');
 const labelTime = (h,m)=>`${((h%12)+12)%12||12}시 ${pad2(m)}분`;
 const mod = (n,m)=>((n % m) + m) % m;
 
-/* 눈금 + 숫자 */
 (function buildTicks(){
   const cx=100, cy=100;
   const rOuter=86, rInner=80, rHourTick=76;
@@ -203,15 +179,17 @@ const mod = (n,m)=>((n % m) + m) % m;
     const isHourMark = i%5===0;
 
     // 눈금
-    const r1=isHourMark? rHourTick : rInner;
-    const x1=cx+r1*Math.sin(a), y1=cy-r1*Math.cos(a);
-    const x2=cx+rOuter*Math.sin(a), y2=cy-rOuter*Math.cos(a);
-    const ln=document.createElementNS('http://www.w3.org/2000/svg','line');
-    ln.setAttribute('x1',x1); ln.setAttribute('y1',y1);
-    ln.setAttribute('x2',x2); ln.setAttribute('y2',y2);
-    ln.setAttribute('stroke',isHourMark?'#9aa3d4':'#4a4f77');
-    ln.setAttribute('stroke-width',isHourMark?'2.2':'1.1');
-    ticks.appendChild(ln);
+    {
+      const r1=isHourMark? rHourTick : rInner;
+      const x1=cx+r1*Math.sin(a), y1=cy-r1*Math.cos(a);
+      const x2=cx+rOuter*Math.sin(a), y2=cy-rOuter*Math.cos(a);
+      const ln=document.createElementNS('http://www.w3.org/2000/svg','line');
+      ln.setAttribute('x1',x1); ln.setAttribute('y1',y1);
+      ln.setAttribute('x2',x2); ln.setAttribute('y2',y2);
+      ln.setAttribute('stroke',isHourMark?'#9aa3d4':'#4a4f77');
+      ln.setAttribute('stroke-width',isHourMark?'2.2':'1.1');
+      ticks.appendChild(ln);
+    }
 
     if(isHourMark){
       // 시(1~12)
@@ -227,7 +205,7 @@ const mod = (n,m)=>((n % m) + m) % m;
       tH.textContent=hourNum;
       ticks.appendChild(tH);
 
-      // 분(5,10,...,55, 12시 위치는 60)
+      // 분(5,10,...,55, 그리고 12시 위치는 60)
       const minuteLabel = (i===0)? 60 : i; // 0 -> 60
       const txM=cx+rMinNum*Math.sin(a);
       const tyM=cy-rMinNum*Math.cos(a)-2;
@@ -278,6 +256,8 @@ function newQ(){
   $('#targetLabel').textContent = labelTime(state.target.h,state.target.m);
   render();
 }
+$('#difficulty').addEventListener('change', e=>{ state.difficulty=e.target.value; newQ(); });
+$('#newQ').addEventListener('click', newQ);
 
 /* 좌표→각도 */
 function angleFromPoint(clientX, clientY){
@@ -379,67 +359,24 @@ window.addEventListener('pointerup', endDrag, {passive:false});
 window.addEventListener('pointercancel', endDrag, {passive:false});
 
 /* ===== 정답 확인 & 보기 ===== */
-function applyResult(okText=null, badText=null){
-  const resDesk = $('#resultSet');
-  const resMob  = $('#resultInline');
-
-  if(okText){
-    resDesk && (resDesk.textContent=okText, resDesk.className='result ok');
-    resMob  && (resMob.textContent =okText, resMob.className='result ok');
-  }else if(badText){
-    resDesk && (resDesk.textContent=badText, resDesk.className='result bad');
-    resMob  && (resMob.textContent =badText, resMob.className='result bad');
-  }else{
-    resDesk && (resDesk.textContent='');
-    resMob  && (resMob.textContent='');
-  }
-}
-
 function checkAnswer(){
   const nowH12 = mod(state.now.hourAbs,12);
   const tgtH12 = mod(state.target.h,12);
   const ok = (nowH12===tgtH12) && (state.now.m===state.target.m);
+  const res = $('#resultSet');
   if(ok){
-    applyResult('정답! 잘했어요 🎉', null);
+    res.textContent='정답! 잘했어요 🎉'; res.className='result ok';
     triggerCelebration('정답! 잘했어요 🎉', 3000);
   }else{
-    applyResult(null, `아쉬워요! 정답은 ${labelTime(state.target.h,state.target.m)}`);
+    res.textContent=`아쉬워요! 정답은 ${labelTime(state.target.h,state.target.m)}`; res.className='result bad';
   }
 }
-function showAnswer(){
-  state.now.hourAbs = state.target.h; state.now.m = state.target.m; render();
-  applyResult(`정답은 ${labelTime(state.target.h,state.target.m)} 입니다.`, null);
-}
-
-/* PC 패널 버튼 */
 $('#checkSet').addEventListener('click', checkAnswer);
-$('#showAnswerSet').addEventListener('click', showAnswer);
-/* 모바일 상단 버튼 */
-$('#checkInline').addEventListener('click', checkAnswer);
-$('#showAnswerInline').addEventListener('click', showAnswer);
-/* 기존 모바일 하단 버튼과도 연결(원하면 제거 가능) */
-//document.getElementById('miCheck').addEventListener('click', checkAnswer);
-document.getElementById('miCheck')?.addEventListener('click', checkAnswer);
-//document.getElementById('miNew')?.addEventListener('click', newQ);
+$('#showAnswerSet').addEventListener('click', ()=>{ state.now.hourAbs = state.target.h; state.now.m = state.target.m; render(); });
 
-
-/* 문제 생성 버튼(PC/모바일 동기화) */
-function syncDifficultyFromSelect(sel){
-  state.difficulty = sel.value;
-  // 다른 셀렉트도 동기화
-  const other = sel.id==='difficulty' ? $('#difficultyMobile') : $('#difficulty');
-  if(other && other.value!==sel.value) other.value = sel.value;
-  newQ();
-}
-$('#difficulty').addEventListener('change', e=>syncDifficultyFromSelect(e.target));
-$('#difficultyMobile').addEventListener('change', e=>syncDifficultyFromSelect(e.target));
-
-$('#newQ').addEventListener('click', newQ);
-$('#newQMobile').addEventListener('click', newQ);
-//document.getElementById('miNew').addEventListener('click', newQ);
-//document.getElementById('miCheck')?.addEventListener('click', checkAnswer);
-document.getElementById('miNew')?.addEventListener('click', newQ);
-
+/* 모바일 버튼도 동일 함수 연결 */
+document.getElementById('miCheck').addEventListener('click', checkAnswer);
+document.getElementById('miNew').addEventListener('click', newQ);
 
 /* ===== 읽어주기 + 타이핑 (방어코드 포함) ===== */
 let _typeTimer=null;
@@ -464,7 +401,7 @@ function loadVoices(){
   });
 }
 async function speakNow(){
-  // 없으면 생성
+  // 없으면 생성 (이중 안전)
   let out = $('#readText');
   if(!out){
     out = document.createElement('div');
@@ -533,19 +470,13 @@ function showToast(text){
   };
 })();
 
-/* 분 숫자 보이기 토글 */
+// 분 숫자 보이기 토글
 const minLabelsG = document.getElementById('minLabels');
 minLabelsG.classList.remove('show');
 document.getElementById('clock').addEventListener('click', ()=>{ minLabelsG.classList.toggle('show'); });
 
 /* 초기화 */
-window.addEventListener('DOMContentLoaded', ()=>{
-  // 난이도 셀렉트 동기화(초기)
-  const dDesk = $('#difficulty'), dMob = $('#difficultyMobile');
-  if(dDesk) dDesk.value = state.difficulty;
-  if(dMob)  dMob.value  = state.difficulty;
-  newQ(); render();
-});
+window.addEventListener('DOMContentLoaded', ()=>{ newQ(); render(); });
 </script>
 </body>
 </html>
