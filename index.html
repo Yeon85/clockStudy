@@ -277,15 +277,20 @@ function randomTime(diff){
   else m=Math.floor(Math.random()*60);
   return {h,m};
 }
+
 function newQ(){
   const diff = state.difficulty || 'five';
   state.target = randomTime(diff);
   const init   = randomTime(diff);
   state.now.hourAbs = init.h;
-  state.now.m       = init.m;
+  //분
+  //state.now.m       = init.m;
+  state.now.m = 0;
   $('#targetLabel').textContent = labelTime(state.target.h,state.target.m);
   render();
 }
+
+
 
 /* 좌표→각도 */
 function angleFromPoint(clientX, clientY){
